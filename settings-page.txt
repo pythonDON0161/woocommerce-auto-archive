@@ -1,0 +1,61 @@
+<?php
+// Register the settings
+add_action('admin_init', 'woa_register_settings');
+function woa_register_settings() {
+    register_setting('woa_settings_group', 'woa_order_age_limit');
+    register_setting('woa_settings_group', 'woa_cron_frequency');
+}
+
+// Display the settings page
+function woa_settings_page() {
+    global $wpdb;
+
+    // Get saved options
+    $age_limit = get_option('woa_order_age_limit', 12); // Default: 12 months
+    $cron_frequency = get_option('woa_cron_frequency', 'daily'); // Default: daily
+
+    // Get count of orders older than selected age limit
+    $cutoff_date = date('Y-m-d H:i:s', strtotime("-$age_limit months"));
+    $order_count = $wpdb->get_var("
+        SELECT COUNT(*) FROM {$wpdb->prefix}posts
+        WHERE post_type IN ('shop_order', 'shop_order_refund')
+        AND post_date < '$cutoff_date'
+    ");
+
+    ?>
+    <div class="wrap">
+        <h1>WooCommerce Order Archiver Settings</h1>
+        <form method="post" action="options.php">
+            <?php settings_fields('woa_settings_group'); ?>
+            <?php do_settings_sections('woa_settings_group'); ?>
+
+            <table class="form-table">
+                <tr valign="top">
+                    <th scope="row">Archive Orders Older Than</th>
+                    <td>
+                        <input type="number" name="woa_order_age_limit" value="<?php echo esc_attr($age_limit); ?>" min="1" /> months
+                    </td>
+                </tr>
+                <tr valign="top">
+                    <th scope="row">Cron Job Frequency</th>
+                    <td>
+                        <select name="woa_cron_frequency">
+                            <option value="daily" <?php selected($cron_frequency, 'daily'); ?>>Daily</option>
+                            <option value="weekly" <?php selected($cron_frequency, 'weekly'); ?>>Weekly</option>
+                            <option value="monthly" <?php selected($cron_frequency, 'monthly'); ?>>Monthly</option>
+                        </select>
+                    </td>
+                </tr>
+                <tr valign="top">
+                    <th scope="row">Orders to be Archived</th>
+                    <td>
+                        <p><strong><?php echo $order_count; ?></strong> orders older than <?php echo $age_limit; ?> months will be archived.</p>
+                    </td>
+                </tr>
+            </table>
+            
+            <?php submit_button(); ?>
+        </form>
+    </div>
+    <?php
+}

@@ -1,0 +1,12 @@
+/* Custom styles for the WooCommerce Order Archiver settings page */
+.wrap h1 {
+    color: #0073aa;
+}
+
+.form-table th {
+    width: 200px;
+}
+
+.form-table td {
+    padding: 10px;
+}
