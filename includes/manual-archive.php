@@ -55,47 +55,86 @@ function display_order_filter_form($error_message = '') {
     ?>
 
    
+    <style>
+        .form-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px; /* Space between fields */
+            margin-bottom: 15px; /* Space below each row */
+        }
+        .form-row label {
+            flex: 1; /* Take equal space */
+            min-width: 150px; /* Minimum width for labels */
+        }
+        .form-row input, 
+        .form-row select {
+            flex: 2; /* Take more space */
+        }
+    </style>
     
     <form method="post">
-        <label for="start_date">Start Date:</label>
-        <input type="date" id="start_date" name="start_date"><br><br>
-
-        <label for="end_date">End Date:</label>
-        <input type="date" id="end_date" name="end_date"><br><br>
-
-        <label for="status">Order Status:</label>
-        <select id="status" name="status">
-            <option value="">Any</option>
-            <option value="wc-pending">Pending</option>
-            <option value="wc-processing">Processing</option>
-            <option value="wc-completed">Completed</option>
-            <option value="wc-cancelled">Cancelled</option>
-            <option value="wc-refunded">Refunded</option>
-            <option value="wc-failed">Failed</option>
-        </select><br><br>
-
-        <label for="min_total">Minimum Total Amount:</label>
-        <input type="number" step="0.01" id="min_total" name="min_total"><br><br>
-
-        <label for="max_total">Maximum Total Amount:</label>
-        <input type="number" step="0.01" id="max_total" name="max_total"><br><br>
-
-        <label for="payment_method">Payment Method:</label>
-        <select id="payment_method" name="payment_method">
-            <option value="">Any</option>
+        <div class="form-row">
+            <label for="start_date">Start Date:</label>
+            <input type="date" id="start_date" name="start_date">
             
-            <?php   
-                 //Get payment gateways from woocommerce
-                    $payment_gateways = WC()->payment_gateways->get_available_payment_gateways();
-                    foreach ( $payment_gateways as $gateway ) : ?>
+            <label for="end_date">End Date:</label>
+            <input type="date" id="end_date" name="end_date">
+        </div>
 
-                <option value="<?php echo esc_attr($gateway->id); ?>"><?php echo esc_html($gateway->get_title()); ?></option>
-           
-            <?php endforeach; ?>
+        <div class="form-row">
+            <label for="status">Order Status:</label>
+            <select id="status" name="status">
+                <option value="">Any</option>
+                <option value="wc-pending">Pending</option>
+                <option value="wc-processing">Processing</option>
+                <option value="wc-completed">Completed</option>
+                <option value="wc-cancelled">Cancelled</option>
+                <option value="wc-refunded">Refunded</option>
+                <option value="wc-failed">Failed</option>
+            </select>
+            
+            <label for="min_total">Minimum Total Amount:</label>
+            <input type="number" step="0.01" id="min_total" name="min_total">
+            
+            <label for="max_total">Maximum Total Amount:</label>
+            <input type="number" step="0.01" id="max_total" name="max_total">
+        </div>
 
-        </select><br><br>
+        <div class="form-row">
+            <label for="payment_method">Payment Method:</label>
+            <select id="payment_method" name="payment_method">
+                <option value="">Any</option>
+                <?php 
+                $payment_gateways = WC()->payment_gateways->get_available_payment_gateways();
+                foreach ( $payment_gateways as $gateway ) : 
+                ?>
+                    <option value="<?php echo esc_attr($gateway->id); ?>"><?php echo esc_html($gateway->get_title()); ?></option>
+                <?php endforeach; ?>
+            </select>
+            
+            <label for="product_filter">Filter by Product:</label>
+            <select id="product_filter" name="product_filter">
+                <option value="">Any</option>
+                <option value="contains">Contains Product(s)</option>
+                <option value="not_contains">Does Not Contain Product(s)</option>
+            </select>
+            <label for="product_ids">Select Product(s):</label>
+            <select id="product_ids" name="product_ids[]" multiple>
+                <?php 
+                
+                $products = wc_get_products(array(
+                    'limit' => -1, // Get all products
+                    'status' => 'publish', // Only published products
+                ));
+                foreach ($products as $product) : ?>
+                    <option value="<?php echo esc_attr($product->get_id()); ?>"><?php echo esc_html($product->get_name()); ?></option>
+                <?php endforeach; ?>
+            </select>
+        </div>
 
-        <input type="submit" value="Filter Orders">
+        <div class="form-row">
+            <input type="submit" value="Filter Orders">
+        </div>
     </form>
 
     <?php
@@ -116,6 +155,8 @@ function get_filtered_orders() {
     $min_total = isset($_POST['min_total']) ? floatval($_POST['min_total']) : '';
     $max_total = isset($_POST['max_total']) ? floatval($_POST['max_total']) : '';
     $payment_method = isset($_POST['payment_method']) ? sanitize_text_field($_POST['payment_method']) : '';
+    $product_filter = isset($_POST['product_filter']) ? sanitize_text_field($_POST['product_filter']) : '';
+    $product_ids = isset($_POST['product_ids']) ? array_map('intval', $_POST['product_ids']) : [];
 
     // Validate that at least start date or end date is provided
     if ( empty($start_date) && empty($end_date) ) {
@@ -127,33 +168,56 @@ function get_filtered_orders() {
     }
 
     // Build the base query
-    $query = "SELECT * FROM {$wpdb->prefix}wc_orders WHERE 1=1";
+    $query = "
+        SELECT 
+            o.id AS order_id,
+            o.date_created_gmt,
+            CONCAT(a.first_name, ' ', a.last_name) AS customer_name,
+            o.status,
+            o.payment_method,
+            o.total_amount
+        FROM 
+            {$wpdb->prefix}wc_orders o
+        LEFT JOIN 
+            {$wpdb->prefix}wc_order_addresses a ON o.id = a.order_id
+        LEFT JOIN 
+            {$wpdb->prefix}wc_order_product_lookup p ON o.id = p.order_id
+        WHERE 
+            1=1
+    ";
 
     // Add conditions only if user input is provided
     $query_params = [];
     if ( !empty($start_date) ) {
-        $query .= " AND date_created_gmt >= %s";
+        $query .= " AND o.date_created_gmt >= %s";
         $query_params[] = $start_date;
     }
     if ( !empty($end_date) ) {
-        $query .= " AND date_created_gmt <= %s";
+        $query .= " AND o.date_created_gmt <= %s";
         $query_params[] = $end_date;
     }
     if ( !empty($status) ) {
-        $query .= " AND status = %s";
+        $query .= " AND o.status = %s";
         $query_params[] = $status;
     }
     if ( $min_total !== '' ) {
-        $query .= " AND total_amount >= %f";
+        $query .= " AND o.total_amount >= %f";
         $query_params[] = $min_total;
     }
     if ( $max_total !== '' && $max_total > 0 ) {
-        $query .= " AND total_amount <= %f";
+        $query .= " AND o.total_amount <= %f";
         $query_params[] = $max_total;
     }
     if ( !empty($payment_method) ) {
-        $query .= " AND payment_method = %s";
+        $query .= " AND o.payment_method = %s";
         $query_params[] = $payment_method;
+    }
+    if ( !empty($product_filter) && !empty($product_ids) ) {
+        if ($product_filter === 'contains') {
+            $query .= " AND p.product_id IN (" . implode(',', array_map('intval', $product_ids)) . ")";
+        } elseif ($product_filter === 'not_contains') {
+            $query .= " AND p.product_id NOT IN (" . implode(',', array_map('intval', $product_ids)) . ")";
+        }
     }
 
     // Prepare the query
@@ -188,16 +252,22 @@ function display_results_and_query($data) {
         // Display results in a table
         echo '<table border="1" cellpadding="5" cellspacing="0" style="background-color: white;">';
         echo '<tr>';
-        foreach ($data['results'][0] as $column => $value) {
-            echo '<th>' . esc_html($column) . '</th>';
-        }
+        echo '<th>Order Number</th>';
+        echo '<th>Date</th>';
+        echo '<th>Customer Name</th>';
+        echo '<th>Order Status</th>';
+        echo '<th>Payment Method</th>';
+        echo '<th>Value</th>';
         echo '</tr>';
 
         foreach ($data['results'] as $order) {
             echo '<tr>';
-            foreach ($order as $value) {
-                echo '<td>' . esc_html($value) . '</td>';
-            }
+            echo '<td>' . esc_html($order->order_id) . '</td>';
+            echo '<td>' . esc_html(date('F j, Y', strtotime($order->date_created_gmt))) . '</td>';
+            echo '<td>' . esc_html($order->customer_name) . '</td>';
+            echo '<td>' . esc_html(ucfirst(str_replace('wc-', '', $order->status))) . '</td>'; // Format status to remove "wc-" prefix and capitalize first letter
+            echo '<td>' . esc_html($order->payment_method) . '</td>';
+            echo '<td>' . esc_html(number_format($order->total_amount, 2)) . '</td>';
             echo '</tr>';
         }
         echo '</table>';
@@ -207,7 +277,6 @@ function display_results_and_query($data) {
     echo '<h3>Generated SQL Query:</h3>';
     echo '<pre style="background-color: #f9f9f9; padding: 10px; border: 1px solid #ddd;">' . esc_html($data['query']) . '</pre>';
 }
-
 // Main logic to display the form and handle form submission
 display_order_filter_form();
 
