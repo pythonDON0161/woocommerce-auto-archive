@@ -49,16 +49,14 @@ function woa_manual_archive_page() {
 
 
 
-// Ensure WooCommerce is active
-if ( ! class_exists( 'WooCommerce' ) ) {
-    die('WooCommerce is not activated.');
-}
-
 // Display the form for user input
 function display_order_filter_form($error_message = '') {
+  
     ?>
-<form method="post">
-<form method="post">
+
+   
+    
+    <form method="post">
         <label for="start_date">Start Date:</label>
         <input type="date" id="start_date" name="start_date"><br><br>
 
@@ -82,6 +80,21 @@ function display_order_filter_form($error_message = '') {
         <label for="max_total">Maximum Total Amount:</label>
         <input type="number" step="0.01" id="max_total" name="max_total"><br><br>
 
+        <label for="payment_method">Payment Method:</label>
+        <select id="payment_method" name="payment_method">
+            <option value="">Any</option>
+            
+            <?php   
+                 //Get payment gateways from woocommerce
+                    $payment_gateways = WC()->payment_gateways->get_available_payment_gateways();
+                    foreach ( $payment_gateways as $gateway ) : ?>
+
+                <option value="<?php echo esc_attr($gateway->id); ?>"><?php echo esc_html($gateway->get_title()); ?></option>
+           
+            <?php endforeach; ?>
+
+        </select><br><br>
+
         <input type="submit" value="Filter Orders">
     </form>
 
@@ -102,6 +115,7 @@ function get_filtered_orders() {
     $status = isset($_POST['status']) ? sanitize_text_field($_POST['status']) : '';
     $min_total = isset($_POST['min_total']) ? floatval($_POST['min_total']) : '';
     $max_total = isset($_POST['max_total']) ? floatval($_POST['max_total']) : '';
+    $payment_method = isset($_POST['payment_method']) ? sanitize_text_field($_POST['payment_method']) : '';
 
     // Validate that at least start date or end date is provided
     if ( empty($start_date) && empty($end_date) ) {
@@ -136,6 +150,10 @@ function get_filtered_orders() {
     if ( $max_total !== '' && $max_total > 0 ) {
         $query .= " AND total_amount <= %f";
         $query_params[] = $max_total;
+    }
+    if ( !empty($payment_method) ) {
+        $query .= " AND payment_method = %s";
+        $query_params[] = $payment_method;
     }
 
     // Prepare the query
