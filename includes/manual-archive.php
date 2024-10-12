@@ -1,5 +1,7 @@
 <?php
 // Display the manual archive page
+
+
 function woa_manual_archive_page() {
     global $wpdb;
 
@@ -24,7 +26,7 @@ function woa_manual_archive_page() {
     <div class="wrap">
         <h1>Manual Order Archiving</h1>
 
-        <form method="post" action="">
+        <form method="post" action=" ">
             <table class="form-table">
                 <tr valign="top">
                     <th scope="row">Select Date Range</th>
@@ -56,6 +58,7 @@ function display_order_filter_form($error_message = '') {
 
    
     <style>
+     
         .form-row {
             display: flex;
             flex-wrap: wrap;
@@ -70,9 +73,13 @@ function display_order_filter_form($error_message = '') {
         .form-row select {
             flex: 2; /* Take more space */
         }
+
+        table{width:100%;}
+
     </style>
     
-    <form method="post">
+    <form method="post" >
+     
         <div class="form-row">
             <label for="start_date">Start Date:</label>
             <input type="date" id="start_date" name="start_date">
@@ -249,6 +256,7 @@ function display_results_and_query($data) {
     if ( empty($data['results']) ) {
         echo '<p>No orders found matching the criteria.</p>';
     } else {
+
         // Display results in a table
         echo '<table border="1" cellpadding="5" cellspacing="0" style="background-color: white;">';
         echo '<tr>';
@@ -271,12 +279,23 @@ function display_results_and_query($data) {
             echo '</tr>';
         }
         echo '</table>';
-    }
+    }  
+
+    // Add "Archive Orders Now" button at the bottom
+    echo '<form method="post" action="' . esc_url(admin_url("admin-post.php")) . '" style="margin-top: 20px;">';
+    echo '<input type="hidden" name="action" value="archive_orders_action">';
+    echo '<input type="hidden" name="archive_order_ids" value="' . esc_attr(implode(',', wp_list_pluck($data['results'], 'order_id'))) . '">';
+    echo '<input type="submit" name="archive_orders" value="Archive Orders Now"' . (empty($data['results']) ? ' disabled' : '') . '>';
+    echo '</form>';
+
 
     // Display the generated SQL query
     echo '<h3>Generated SQL Query:</h3>';
     echo '<pre style="background-color: #f9f9f9; padding: 10px; border: 1px solid #ddd;">' . esc_html($data['query']) . '</pre>';
 }
+
+
+
 // Main logic to display the form and handle form submission
 display_order_filter_form();
 

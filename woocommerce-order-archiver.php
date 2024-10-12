@@ -71,5 +71,8 @@ add_submenu_page(
 require_once plugin_dir_path(__FILE__) . 'includes/settings-page.php';
 require_once plugin_dir_path(__FILE__) . 'includes/manual-archive.php';
 /*require_once plugin_dir_path(__FILE__) . 'includes/filter-page.php';*/
+
+require_once plugin_dir_path(__FILE__) . 'includes/functions/archive-orders.php'; // Adjust the path as necessary
+
 require_once plugin_dir_path(__FILE__) . 'includes/cron-job.php';
 require_once plugin_dir_path(__FILE__) . 'includes/database-handler.php';  // Optional if you want to manage DB separately
