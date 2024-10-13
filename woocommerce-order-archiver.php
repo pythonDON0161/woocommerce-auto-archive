@@ -12,6 +12,8 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
+
+
 // Activation hook to set up cron
 register_activation_hook(__FILE__, 'woa_activate_plugin');
 function woa_activate_plugin() {
@@ -26,6 +28,7 @@ function woa_deactivate_plugin() {
         wp_unschedule_event($timestamp, 'woa_archive_old_orders');
     }
 }
+
 
 
 
@@ -73,6 +76,6 @@ require_once plugin_dir_path(__FILE__) . 'includes/manual-archive.php';
 /*require_once plugin_dir_path(__FILE__) . 'includes/filter-page.php';*/
 
 require_once plugin_dir_path(__FILE__) . 'includes/functions/archive-orders.php'; // Adjust the path as necessary
-
+require_once plugin_dir_path(__FILE__) . 'includes/functions/enque_js_files.php'; //add ajax fucntionality etc 
 require_once plugin_dir_path(__FILE__) . 'includes/cron-job.php';
 require_once plugin_dir_path(__FILE__) . 'includes/database-handler.php';  // Optional if you want to manage DB separately

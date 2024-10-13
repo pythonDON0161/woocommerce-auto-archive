@@ -1,11 +1,10 @@
 <?php
 
 // Add action hooks for handling the form submission
-add_action('admin_post_archive_orders_action', 'handle_archive_orders');
-add_action('admin_post_nopriv_archive_orders_action', 'handle_archive_orders');
+//add_action('admin_post_archive_orders_action', 'handle_archive_orders');
+//add_action('admin_post_nopriv_archive_orders_action', 'handle_archive_orders');
 
-// Output to confirm the archive orders file is loaded
-echo 'Archive orders file loaded successfully.';
+
 
 // Function to archive orders
 function archive_orders($order_ids) {
@@ -52,19 +51,58 @@ function archive_orders($order_ids) {
     }
 
     // Remove orders from the original table
-    $delete_orders = "DELETE FROM {$wpdb->prefix}wc_orders WHERE id IN (" . implode(',', array_map('intval', $order_ids)) . ")";
+   /* $delete_orders = "DELETE FROM {$wpdb->prefix}wc_orders WHERE id IN (" . implode(',', array_map('intval', $order_ids)) . ")";
     if ($wpdb->query($delete_orders) === false) {
         return 'Error deleting orders from original table: ' . $wpdb->last_error;
     }
-
+*/
     return 'Orders successfully archived.';
 }
 
-// Handle form submission
+// Handle form submissionadd_action('wp_ajax_archive_orders_action', 'handle_archive_orders');
+
+add_action('wp_ajax_archive_orders_action', 'handle_archive_orders');
+add_action('wp_ajax_nopriv_archive_orders_action', 'handle_archive_orders');
+
+
+
 function handle_archive_orders() {
+    ob_start(); // Start output buffering
+    check_ajax_referer('archive_orders_nonce', 'nonce');
+
+    if (empty($_POST['archive_order_ids'])) {
+        wp_send_json_error('No order IDs provided.');
+        wp_die();
+    }
+
+    $order_ids = explode(',', sanitize_text_field($_POST['archive_order_ids']));
+   // $result = archive_orders($order_ids); // Call your archive function
+
+    $response = '';
+    if (is_wp_error($response)) {
+        error_log('Response: ' . $response); // Log for debugging
+        wp_send_json_error($response->get_error_message());
+    } else {
+        error_log('Response: ' . $response); // Log for debugging
+        wp_send_json_success('Orders successfully archived.');
+    }
+
+    //wp_die(); // This is required to terminate immediately and return a proper response
+    ob_end_clean(); // Clean output buffer
+}
+
+
+
+// Handle the archive orders
+/*function handle_archive_orders() {
+    // Check nonce for security
+    if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'archive_orders_nonce')) {
+        wp_send_json_error('Invalid nonce.');
+    }
+
     // Check if the form was submitted with the required data
     if (!isset($_POST['archive_order_ids']) || empty($_POST['archive_order_ids'])) {
-        wp_die('<div style="color: red;">No order IDs provided. Please try again.</div>');
+        wp_send_json_error('No order IDs provided. Please try again.');
     }
 
     // Sanitize and process the order IDs
@@ -73,10 +111,9 @@ function handle_archive_orders() {
     // Perform the archiving process
     $result = archive_orders($order_ids);
     if ($result === 'Orders successfully archived.') {
-        echo '<div style="color: green;">' . $result . '</div>';
+        wp_send_json_success($result);
     } else {
-        echo '<div style="color: red;">' . $result . '</div>';
+        wp_send_json_error($result);
     }
-
-    wp_die(); // Stops further execution to avoid rendering the rest of WordPress
 }
+*/

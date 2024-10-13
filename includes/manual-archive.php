@@ -19,7 +19,7 @@ function woa_manual_archive_page() {
         }
 
         // Redirect or show success message
-        add_action('admin_notices', 'woa_manual_archive_success');
+      //  add_action('admin_notices', 'woa_manual_archive_success');
     }
 
     ?>
@@ -258,6 +258,8 @@ function display_results_and_query($data) {
     } else {
 
         // Display results in a table
+
+        echo '<div id="archive-message"></div>';
         echo '<table border="1" cellpadding="5" cellspacing="0" style="background-color: white;">';
         echo '<tr>';
         echo '<th>Order Number</th>';
@@ -282,10 +284,10 @@ function display_results_and_query($data) {
     }  
 
     // Add "Archive Orders Now" button at the bottom
-    echo '<form method="post" action="' . esc_url(admin_url("admin-post.php")) . '" style="margin-top: 20px;">';
-    echo '<input type="hidden" name="action" value="archive_orders_action">';
+    echo '<form method="post" id="archive-orders-form" style="margin-top: 20px;">';
+    //echo '<input type="hidden" name="action" value="archive_orders_action">';
     echo '<input type="hidden" name="archive_order_ids" value="' . esc_attr(implode(',', wp_list_pluck($data['results'], 'order_id'))) . '">';
-    echo '<input type="submit" name="archive_orders" value="Archive Orders Now"' . (empty($data['results']) ? ' disabled' : '') . '>';
+    echo '<input type="submit" id="archive-orders-btn" name="archive_orders" value="Archive Orders Now"' . (empty($data['results']) ? ' disabled' : '') . '>';
     echo '</form>';
 
 
@@ -307,6 +309,7 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' ) {
 }
 
 // Success message after manual archive
-function woa_manual_archive_success() {
+/*function woa_manual_archive_success() {
     echo '<div class="notice notice-success is-dismissible"><p>Orders successfully archived.</p></div>';
 }
+*/
