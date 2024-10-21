@@ -10,8 +10,6 @@
 function archive_orders($order_ids) {
     global $wpdb;
 
-    // Output to confirm the archive function is triggered
-    echo 'The archive function has been triggered.';
 
     // Validate input
     if (empty($order_ids) || !is_array($order_ids)) {
@@ -51,15 +49,15 @@ function archive_orders($order_ids) {
     }
 
     // Remove orders from the original table
-   /* $delete_orders = "DELETE FROM {$wpdb->prefix}wc_orders WHERE id IN (" . implode(',', array_map('intval', $order_ids)) . ")";
+   $delete_orders = "DELETE FROM {$wpdb->prefix}wc_orders WHERE id IN (" . implode(',', array_map('intval', $order_ids)) . ")";
     if ($wpdb->query($delete_orders) === false) {
         return 'Error deleting orders from original table: ' . $wpdb->last_error;
     }
-*/
+
     return 'Orders successfully archived.';
 }
 
-// Handle form submissionadd_action('wp_ajax_archive_orders_action', 'handle_archive_orders');
+// Handle form submission add_action('wp_ajax_archive_orders_action', 'handle_archive_orders');
 
 add_action('wp_ajax_archive_orders_action', 'handle_archive_orders');
 add_action('wp_ajax_nopriv_archive_orders_action', 'handle_archive_orders');
@@ -76,15 +74,18 @@ function handle_archive_orders() {
     }
 
     $order_ids = explode(',', sanitize_text_field($_POST['archive_order_ids']));
-   // $result = archive_orders($order_ids); // Call your archive function
+    $result = archive_orders($order_ids); // Call your archive function
 
     $response = '';
+     // Your logic for archiving orders
+    $response_success = 'Orders successfully archived.';
     if (is_wp_error($response)) {
         error_log('Response: ' . $response); // Log for debugging
+        ob_clean(); // Clear the output buffer
         wp_send_json_error($response->get_error_message());
     } else {
         error_log('Response: ' . $response); // Log for debugging
-        wp_send_json_success('Orders successfully archived.');
+        wp_send_json_success($response_success);
     }
 
     //wp_die(); // This is required to terminate immediately and return a proper response

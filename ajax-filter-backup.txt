@@ -1,0 +1,36 @@
+jQuery(document).ready(function ($) {
+    $('#filter-orders-form').on('submit', function (e) {
+        e.preventDefault(); // Prevent the form from submitting normally
+
+        var formData = $(this).serialize(); // Serialize the form data
+
+        $.ajax({
+            type: 'POST',
+            url: woaAjax.ajaxUrl,
+            data:$(this).serialize() + '&action=get_filtered_orders', // Serialize form data and add action
+            success: function(response) {
+    
+               console.log(response);
+
+              //var messageElement = document.getElementById('archive-message');
+                if (response.error) {
+                    // Handle error message
+                    $('#archive-message').html('<p style="color: red;">' + response.error + '</p>');
+                } 
+                 else {
+                    // Replace content with the returned HTML
+                   
+                     var formatted = response.toString();
+                    // messageElement.innerHTML = formatted;
+                    console.log(formatted);
+
+                    $('#archive-message').html(formatted);
+                  
+                }},
+
+            error: function() {
+                $('#archive-message').html('<p style="color: red;">An error occurred. Please try again.</p>');
+            }
+        });
+    });
+});
